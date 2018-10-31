@@ -16,6 +16,11 @@ import os
 import re
 import rsa
 import sys
+
+import traceback
+import json
+import hashlib
+import datetime, time
 reload(sys)
 sys.setdefaultencoding('utf8')
 private_key_tpl = '''-----BEGIN PRIVATE KEY-----
@@ -36,6 +41,52 @@ def getsign(key, data):
     signature = rsa.sign(str(data), pri_key, 'SHA-1')
     return base64.b64encode(signature)
 
+def md5(_s):
+    return hashlib.new('md5', str(_s)).hexdigest()
+    
+    
+def json_dumps(obj):
+    return json.dumps(obj, ensure_ascii=False, cls=DateEncoder)
+
+
+def get_sign_str(param, ignore=("", None), link="=",
+                 join="&", ignore_key=("sign",),
+                 change_bool=False, join_value=False, sort=True):
+    str_list = []
+    _d = param.iteritems()
+    if sort:
+        _d = sorted(_d)
+    for k, v in _d:
+        if k in ignore_key or v in ignore:
+            continue
+        if change_bool and isinstance(v, bool):
+            v = "1" if v is True else "0"
+        _s = "%s" % v if join_value else "%s%s%s" % (k, link, "" if v is None else v)
+        str_list.append(_s)
+
+    return join.join(str_list)
+
+
+def trans_xml_to_dict(xml):
+    from bs4 import BeautifulSoup
+    soup = BeautifulSoup(xml, features='xml')
+    xml = soup.find('xml')
+    if not xml:
+        return {}
+
+    data = dict([(item.name, item.text) for item in xml.find_all()])
+    return data
+
+
+def trans_dict_to_xml(data):
+    xml = []
+    for k in sorted(data.keys()):
+        v = data.get(k)
+        if k == 'detail' and not v.startswith('<![CDATA['):
+            v = '<![CDATA[{}]]>'.format(v)
+        xml.append('<{key}>{value}</{key}>\n'.format(key=k, value=v))
+    return '<xml>\n{}</xml>'.format(''.join(xml))
+    
 
 def ensure_utf8(s):
     if isinstance(s, unicode):
