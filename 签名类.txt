@@ -40,7 +40,12 @@ def getsign(key, data):
     pri_key = rsa.PrivateKey.load_pkcs1(key)
     signature = rsa.sign(str(data), pri_key, 'SHA-1')
     return base64.b64encode(signature)
+    
+def jm_sha256(key, value):
 
+    signature = hmac.new(bytes(key), bytes(value),
+                         digestmod=hashlib.sha256).hexdigest()
+    return signature
 def md5(_s):
     return hashlib.new('md5', str(_s)).hexdigest()
     
